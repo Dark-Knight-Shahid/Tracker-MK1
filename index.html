@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Dashboard</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#14181C">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#14181C;
+    --surface:#1B2025;
+    --surface-2:#20262C;
+    --border:#2A3138;
+    --text:#E8E6E1;
+    --muted:#8B9298;
+    --amber:#E8A54B;
+    --amber-dim:#8A6530;
+    --teal:#4FA6A0;
+    --red:#C1594F;
+    --radius:10px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Inter', sans-serif;
+    min-height:100vh;
+    display:flex;
+    -webkit-tap-highlight-color: transparent;
+  }
+  h1,h2,h3,.display{font-family:'Space Grotesk', sans-serif;}
+  .mono{font-family:'JetBrains Mono', monospace;}
+  button{font-family:inherit; cursor:pointer;}
+
+  /* ---------- AUTH SCREEN ---------- */
+  #auth-screen{
+    position:fixed; inset:0; background:var(--bg);
+    display:flex; align-items:center; justify-content:center;
+    z-index:100; padding:20px;
+  }
+  .auth-box{
+    width:100%; max-width:340px;
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); padding:32px 24px;
+  }
+  .auth-box h1{font-size:22px; margin-bottom:4px;}
+  .auth-box p.sub{color:var(--muted); font-size:13px; margin-bottom:24px;}
+  .field{margin-bottom:14px;}
+  .field label{display:block; font-size:12px; color:var(--muted); margin-bottom:6px;}
+  .field input{
+    width:100%; background:var(--surface-2); border:1px solid var(--border);
+    color:var(--text); padding:10px 12px; border-radius:8px; font-size:14px;
+  }
+  .field input:focus{outline:2px solid var(--amber); outline-offset:1px;}
+  .btn-primary{
+    width:100%; background:var(--amber); color:#14181C; border:none;
+    padding:11px; border-radius:8px; font-weight:600; font-size:14px; margin-top:6px;
+  }
+  .btn-primary:disabled{opacity:0.5;}
+  .auth-toggle{text-align:center; margin-top:16px; font-size:13px; color:var(--muted);}
+  .auth-toggle button{background:none; border:none; color:var(--amber); font-size:13px;}
+  .auth-error{color:var(--red); font-size:12px; margin-top:10px; min-height:14px;}
+
+  /* ---------- APP SHELL ---------- */
+  #app{display:none; width:100%; min-height:100vh;}
+  #app.visible{display:flex;}
+
+  .sidebar{
+    width:64px; background:var(--surface); border-right:1px solid var(--border);
+    display:flex; flex-direction:column; align-items:center; padding:16px 0; gap:6px;
+    flex-shrink:0;
+  }
+  .sidebar .logo{width:8px; height:8px; border-radius:50%; background:var(--amber); margin-bottom:18px;}
+  .nav-btn{
+    width:44px; height:44px; border-radius:8px; background:none; border:none;
+    color:var(--muted); display:flex; align-items:center; justify-content:center;
+    font-size:19px;
+  }
+  .nav-btn.active{background:var(--surface-2); color:var(--amber);}
+
+  .main{flex:1; min-width:0; padding:22px 20px 100px; max-width:760px; margin:0 auto; width:100%;}
+  @media(min-width:640px){ .main{padding:32px 40px 60px;} }
+
+  .topbar{display:flex; align-items:center; justify-content:space-between; margin-bottom:20px;}
+  .topbar h1{font-size:20px;}
+  .date-label{color:var(--muted); font-size:12px; margin-top:2px;}
+
+  /* Day-type dial (signature element) */
+  .dial{
+    display:flex; background:var(--surface-2); border:1px solid var(--border);
+    border-radius:999px; padding:3px; gap:2px;
+  }
+  .dial button{
+    background:none; border:none; color:var(--muted); font-size:11px;
+    padding:6px 12px; border-radius:999px; font-family:'JetBrains Mono', monospace;
+    letter-spacing:0.03em;
+  }
+  .dial button.active{background:var(--amber); color:#14181C; font-weight:500;}
+
+  .card{
+    background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:16px; margin-bottom:14px;
+  }
+  .card h2{font-size:14px; color:var(--muted); font-weight:500; margin-bottom:12px; text-transform:uppercase; letter-spacing:0.04em;}
+
+  /* Routine list */
+  .routine-row{display:flex; gap:12px; padding:10px 0; border-bottom:1px solid var(--border);}
+  .routine-row:last-child{border-bottom:none;}
+  .routine-time{width:64px; flex-shrink:0; color:var(--amber); font-size:12px; font-family:'JetBrains Mono',monospace; padding-top:1px;}
+  .routine-title{font-size:14px;}
+  .empty-hint{color:var(--muted); font-size:13px; padding:8px 0;}
+
+  /* Checklist */
+  .check-row{display:flex; align-items:center; gap:12px; padding:9px 0; border-bottom:1px solid var(--border);}
+  .check-row:last-child{border-bottom:none;}
+  .checkbox{
+    width:20px; height:20px; border-radius:5px; border:1.5px solid var(--muted);
+    flex-shrink:0; display:flex; align-items:center; justify-content:center; font-size:12px;
+    background:none; color:transparent;
+  }
+  .checkbox.done{background:var(--teal); border-color:var(--teal); color:#14181C;}
+  .check-title{font-size:14px; flex:1;}
+  .check-title.done{color:var(--muted); text-decoration:line-through;}
+  .del-btn{background:none; border:none; color:var(--muted); font-size:16px; padding:2px 6px;}
+  .add-row{display:flex; gap:8px; margin-top:12px;}
+  .add-row input{
+    flex:1; background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+    padding:9px 11px; border-radius:8px; font-size:13px;
+  }
+  .add-row button{
+    background:var(--surface-2); border:1px solid var(--border); color:var(--amber);
+    padding:0 14px; border-radius:8px; font-size:13px;
+  }
+  .add-row select{
+    background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+    padding:9px 8px; border-radius:8px; font-size:13px;
+  }
+
+  /* Habits */
+  .habit-card{margin-bottom:10px;}
+  .habit-top{display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;}
+  .habit-name{font-size:14px;}
+  .habit-streak{font-size:12px; color:var(--amber); font-family:'JetBrains Mono',monospace;}
+  .gauge{display:flex; gap:3px;}
+  .gauge-seg{flex:1; height:7px; border-radius:3px; background:var(--surface-2);}
+  .gauge-seg.done{background:var(--teal);}
+  .gauge-seg.missed{background:var(--amber-dim);}
+  .habit-actions{display:flex; gap:6px; margin-top:10px;}
+  .habit-actions button{
+    flex:1; padding:7px; border-radius:7px; border:1px solid var(--border); background:var(--surface-2);
+    color:var(--muted); font-size:11px;
+  }
+  .habit-actions button.sel-done{background:var(--teal); color:#14181C; border-color:var(--teal);}
+  .habit-actions button.sel-recovery{background:var(--amber-dim); color:var(--text); border-color:var(--amber-dim);}
+
+  /* Pending / Progress */
+  .pending-row{display:flex; align-items:flex-start; gap:10px; padding:10px 0; border-bottom:1px solid var(--border);}
+  .pending-row:last-child{border-bottom:none;}
+  .pending-title{font-size:14px;}
+  .pending-note{font-size:12px; color:var(--muted); margin-top:2px;}
+  .pending-done-btn{
+    background:none; border:1px solid var(--border); color:var(--muted);
+    border-radius:6px; font-size:11px; padding:4px 9px; flex-shrink:0;
+  }
+  .stats-row{display:flex; gap:10px; margin-bottom:14px;}
+  .stat{flex:1; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius); padding:14px; text-align:center;}
+  .stat .num{font-size:22px; font-family:'JetBrains Mono',monospace; color:var(--amber);}
+  .stat .lbl{font-size:11px; color:var(--muted); margin-top:2px;}
+
+  /* Journal */
+  #journal-input{
+    width:100%; background:var(--surface-2); border:1px solid var(--border); color:var(--text);
+    padding:12px; border-radius:8px; font-size:14px; font-family:inherit; resize:vertical; min-height:80px;
+  }
+  .journal-save{margin-top:8px; background:var(--amber); color:#14181C; border:none; padding:9px 16px; border-radius:8px; font-size:13px; font-weight:600;}
+  .journal-entry{padding:12px 0; border-bottom:1px solid var(--border);}
+  .journal-entry:last-child{border-bottom:none;}
+  .journal-time{font-size:11px; color:var(--muted); font-family:'JetBrains Mono',monospace; margin-bottom:4px;}
+  .journal-text{font-size:14px; white-space:pre-wrap; line-height:1.5;}
+
+  /* Bottom nav on mobile */
+  .bottom-nav{display:none;}
+  @media(max-width:639px){
+    .sidebar{display:none;}
+    .bottom-nav{
+      display:flex; position:fixed; bottom:0; left:0; right:0; background:var(--surface);
+      border-top:1px solid var(--border); padding:8px 6px calc(8px + env(safe-area-inset-bottom));
+      justify-content:space-around; z-index:50;
+    }
+    .bottom-nav button{
+      background:none; border:none; color:var(--muted); font-size:10px;
+      display:flex; flex-direction:column; align-items:center; gap:3px; padding:4px 8px;
+    }
+    .bottom-nav button.active{color:var(--amber);}
+    .bottom-nav .icon{font-size:18px;}
+  }
+
+  .view{display:none;}
+  .view.active{display:block;}
+  ::selection{background:var(--amber); color:#14181C;}
+  ::-webkit-scrollbar{width:8px;} ::-webkit-scrollbar-thumb{background:var(--border); border-radius:4px;}
+</style>
+</head>
+<body>
+
+<!-- AUTH SCREEN -->
+<div id="auth-screen">
+  <div class="auth-box">
+    <h1>Your Dashboard</h1>
+    <p class="sub">Routine, checklist, habits, and progress — synced everywhere you log in.</p>
+    <div class="field">
+      <label for="auth-email">Email</label>
+      <input type="email" id="auth-email" autocomplete="username">
+    </div>
+    <div class="field">
+      <label for="auth-pass">Password</label>
+      <input type="password" id="auth-pass" autocomplete="current-password">
+    </div>
+    <button class="btn-primary" id="auth-submit">Log in</button>
+    <div class="auth-error" id="auth-error"></div>
+    <div class="auth-toggle">
+      <span id="auth-mode-text">New here?</span>
+      <button id="auth-mode-btn">Create an account</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="sidebar">
+    <div class="logo"></div>
+    <button class="nav-btn" data-view="routine" title="Routine">◷</button>
+    <button class="nav-btn" data-view="checklist" title="Checklist">☑</button>
+    <button class="nav-btn" data-view="habits" title="Habits">◈</button>
+    <button class="nav-btn" data-view="progress" title="Progress">▤</button>
+    <button class="nav-btn" data-view="journal" title="Journal">✎</button>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <h1 id="view-title">Routine</h1>
+        <div class="date-label" id="date-label"></div>
+      </div>
+      <div class="dial" id="day-type-dial">
+        <button data-type="weekday">WEEKDAY</button>
+        <button data-type="weekend">WEEKEND</button>
+        <button data-type="holiday">HOLIDAY</button>
+        <button data-type="exam">EXAM</button>
+      </div>
+    </div>
+
+    <!-- ROUTINE VIEW -->
+    <div class="view" id="view-routine">
+      <div class="card">
+        <h2>Today's schedule</h2>
+        <div id="routine-list"></div>
+        <div class="add-row">
+          <input type="text" id="routine-time" placeholder="Time e.g. 4:45 AM" style="max-width:110px;">
+          <input type="text" id="routine-title" placeholder="What happens">
+          <button id="routine-add">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHECKLIST VIEW -->
+    <div class="view" id="view-checklist">
+      <div class="card">
+        <h2>Today's checklist</h2>
+        <div id="checklist-list"></div>
+        <div class="add-row">
+          <input type="text" id="checklist-title" placeholder="New checklist item">
+          <button id="checklist-add">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- HABITS VIEW -->
+    <div class="view" id="view-habits">
+      <div class="card">
+        <h2>Habits — last 7 days</h2>
+        <div id="habits-list"></div>
+        <div class="add-row">
+          <input type="text" id="habit-title" placeholder="New habit">
+          <button id="habit-add">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PROGRESS VIEW -->
+    <div class="view" id="view-progress">
+      <div class="stats-row">
+        <div class="stat"><div class="num" id="stat-pending">–</div><div class="lbl">Pending</div></div>
+        <div class="stat"><div class="num" id="stat-done-week">–</div><div class="lbl">Done this week</div></div>
+        <div class="stat"><div class="num" id="stat-streaks">–</div><div class="lbl">Active streaks</div></div>
+      </div>
+      <div class="card">
+        <h2>Pending items</h2>
+        <div id="pending-list"></div>
+        <div class="add-row">
+          <input type="text" id="pending-title" placeholder="Something to track">
+          <button id="pending-add">Add</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- JOURNAL VIEW -->
+    <div class="view" id="view-journal">
+      <div class="card">
+        <h2>Think out loud</h2>
+        <textarea id="journal-input" placeholder="Write whatever's on your mind..."></textarea>
+        <button class="journal-save" id="journal-save">Save entry</button>
+      </div>
+      <div class="card">
+        <h2>Past entries</h2>
+        <div id="journal-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="bottom-nav">
+  <button class="nav-btn-m" data-view="routine"><span class="icon">◷</span>Routine</button>
+  <button class="nav-btn-m" data-view="checklist"><span class="icon">☑</span>Check</button>
+  <button class="nav-btn-m" data-view="habits"><span class="icon">◈</span>Habits</button>
+  <button class="nav-btn-m" data-view="progress"><span class="icon">▤</span>Progress</button>
+  <button class="nav-btn-m" data-view="journal"><span class="icon">✎</span>Journal</button>
+</div>
+
+<script type="module">
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+
+// ---- CONFIG ----
+const SUPABASE_URL = 'https://jftrswqpffdxgdohtkzu.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_I0gE8u1hVNQYIT7jw-8OhQ_VVjiaeo9';
+const supabase = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentUser = null;
+let currentDayType = 'weekday';
+let currentView = 'routine';
+
+const todayStr = () => new Date().toISOString().slice(0,10);
+const dowIsWeekend = () => [0,6].includes(new Date().getDay());
+
+// ---------------- AUTH ----------------
+const authScreen = document.getElementById('auth-screen');
+const appEl = document.getElementById('app');
+const authEmail = document.getElementById('auth-email');
+const authPass = document.getElementById('auth-pass');
+const authSubmit = document.getElementById('auth-submit');
+const authError = document.getElementById('auth-error');
+const authModeBtn = document.getElementById('auth-mode-btn');
+const authModeText = document.getElementById('auth-mode-text');
+let authMode = 'login';
+
+authModeBtn.addEventListener('click', () => {
+  authMode = authMode === 'login' ? 'signup' : 'login';
+  authSubmit.textContent = authMode === 'login' ? 'Log in' : 'Create account';
+  authModeText.textContent = authMode === 'login' ? 'New here?' : 'Already have an account?';
+  authModeBtn.textContent = authMode === 'login' ? 'Create an account' : 'Log in instead';
+  authError.textContent = '';
+});
+
+authSubmit.addEventListener('click', async () => {
+  authError.textContent = '';
+  const email = authEmail.value.trim();
+  const password = authPass.value;
+  if (!email || !password) { authError.textContent = 'Enter both fields.'; return; }
+  authSubmit.disabled = true;
+  authSubmit.textContent = '...';
+  let result;
+  if (authMode === 'login') {
+    result = await supabase.auth.signInWithPassword({ email, password });
+  } else {
+    result = await supabase.auth.signUp({ email, password });
+  }
+  authSubmit.disabled = false;
+  authSubmit.textContent = authMode === 'login' ? 'Log in' : 'Create account';
+  if (result.error) {
+    authError.textContent = result.error.message;
+    return;
+  }
+  if (authMode === 'signup' && !result.data.session) {
+    authError.textContent = 'Account created — check your email to confirm, then log in.';
+    return;
+  }
+  onAuthed(result.data.session.user);
+});
+
+async function checkSession() {
+  const { data } = await supabase.auth.getSession();
+  if (data.session) {
+    onAuthed(data.session.user);
+  }
+}
+
+function onAuthed(user) {
+  currentUser = user;
+  authScreen.style.display = 'none';
+  appEl.classList.add('visible');
+  currentDayType = dowIsWeekend() ? 'weekend' : 'weekday';
+  updateDialUI();
+  document.getElementById('date-label').textContent = new Date().toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' });
+  loadAll();
+}
+
+checkSession();
+
+// ---------------- NAVIGATION ----------------
+const viewTitles = { routine:'Routine', checklist:'Checklist', habits:'Habits', progress:'Progress', journal:'Journal' };
+
+function setView(v) {
+  currentView = v;
+  document.querySelectorAll('.view').forEach(el => el.classList.remove('active'));
+  document.getElementById('view-' + v).classList.add('active');
+  document.getElementById('view-title').textContent = viewTitles[v];
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+  document.querySelectorAll('.nav-btn-m').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+  document.getElementById('day-type-dial').style.visibility = v === 'routine' ? 'visible' : 'hidden';
+}
+document.querySelectorAll('.nav-btn, .nav-btn-m').forEach(b => {
+  b.addEventListener('click', () => setView(b.dataset.view));
+});
+setView('routine');
+
+// ---------------- DAY TYPE DIAL ----------------
+function updateDialUI() {
+  document.querySelectorAll('#day-type-dial button').forEach(b => {
+    b.classList.toggle('active', b.dataset.type === currentDayType);
+  });
+}
+document.querySelectorAll('#day-type-dial button').forEach(b => {
+  b.addEventListener('click', () => {
+    currentDayType = b.dataset.type;
+    updateDialUI();
+    loadRoutine();
+  });
+});
+
+function loadAll() {
+  loadRoutine();
+  loadChecklist();
+  loadHabits();
+  loadPending();
+  loadJournal();
+}
+
+// ---------------- ROUTINE ----------------
+async function loadRoutine() {
+  const list = document.getElementById('routine-list');
+  list.innerHTML = '<div class="empty-hint">Loading...</div>';
+  const { data, error } = await supabase.from('routine_items')
+    .select('*').eq('day_type', currentDayType).order('order_index');
+  if (error) { list.innerHTML = '<div class="empty-hint">Could not load.</div>'; return; }
+  if (!data.length) { list.innerHTML = '<div class="empty-hint">No items yet for this day type. Add your first below.</div>'; return; }
+  list.innerHTML = '';
+  data.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'routine-row';
+    row.innerHTML = `<div class="routine-time">${escapeHtml(item.time_label)}</div><div class="routine-title">${escapeHtml(item.title)}</div><button class="del-btn" data-id="${item.id}">×</button>`;
+    row.querySelector('.del-btn').addEventListener('click', async () => {
+      await supabase.from('routine_items').delete().eq('id', item.id);
+      loadRoutine();
+    });
+    list.appendChild(row);
+  });
+}
+document.getElementById('routine-add').addEventListener('click', async () => {
+  const time = document.getElementById('routine-time').value.trim();
+  const title = document.getElementById('routine-title').value.trim();
+  if (!title) return;
+  await supabase.from('routine_items').insert({
+    user_id: currentUser.id, day_type: currentDayType,
+    time_label: time || '—', title, order_index: Date.now()
+  });
+  document.getElementById('routine-time').value = '';
+  document.getElementById('routine-title').value = '';
+  loadRoutine();
+});
+
+// ---------------- CHECKLIST ----------------
+async function loadChecklist() {
+  const list = document.getElementById('checklist-list');
+  list.innerHTML = '<div class="empty-hint">Loading...</div>';
+  const { data: items } = await supabase.from('checklist_items').select('*').eq('active', true).order('order_index');
+  const { data: logs } = await supabase.from('checklist_logs').select('*').eq('log_date', todayStr());
+  if (!items || !items.length) { list.innerHTML = '<div class="empty-hint">No checklist items yet. Add one below.</div>'; return; }
+  list.innerHTML = '';
+  items.forEach(item => {
+    const log = logs?.find(l => l.item_id === item.id);
+    const done = log?.done || false;
+    const row = document.createElement('div');
+    row.className = 'check-row';
+    row.innerHTML = `<button class="checkbox ${done?'done':''}">${done?'✓':''}</button><div class="check-title ${done?'done':''}">${escapeHtml(item.title)}</div><button class="del-btn">×</button>`;
+    row.querySelector('.checkbox').addEventListener('click', async () => {
+      if (log) {
+        await supabase.from('checklist_logs').update({ done: !done }).eq('id', log.id);
+      } else {
+        await supabase.from('checklist_logs').insert({ user_id: currentUser.id, item_id: item.id, log_date: todayStr(), done: true });
+      }
+      loadChecklist();
+    });
+    row.querySelector('.del-btn').addEventListener('click', async () => {
+      await supabase.from('checklist_items').update({ active: false }).eq('id', item.id);
+      loadChecklist();
+    });
+    list.appendChild(row);
+  });
+}
+document.getElementById('checklist-add').addEventListener('click', async () => {
+  const title = document.getElementById('checklist-title').value.trim();
+  if (!title) return;
+  await supabase.from('checklist_items').insert({ user_id: currentUser.id, title, order_index: Date.now() });
+  document.getElementById('checklist-title').value = '';
+  loadChecklist();
+});
+
+// ---------------- HABITS ----------------
+function last7Dates() {
+  const arr = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    arr.push(d.toISOString().slice(0,10));
+  }
+  return arr;
+}
+
+async function loadHabits() {
+  const list = document.getElementById('habits-list');
+  list.innerHTML = '<div class="empty-hint">Loading...</div>';
+  const { data: habits } = await supabase.from('habits').select('*').order('order_index');
+  const dates = last7Dates();
+  const { data: logs } = await supabase.from('habit_logs').select('*').gte('log_date', dates[0]);
+  if (!habits || !habits.length) { list.innerHTML = '<div class="empty-hint">No habits yet. Add one below.</div>'; return; }
+  list.innerHTML = '';
+  habits.forEach(habit => {
+    const habitLogs = logs?.filter(l => l.habit_id === habit.id) || [];
+    let streak = 0;
+    for (let i = dates.length - 1; i >= 0; i--) {
+      const l = habitLogs.find(x => x.log_date === dates[i]);
+      if (l && (l.status === 'done' || l.status === 'recovery')) streak++;
+      else break;
+    }
+    const todayLog = habitLogs.find(l => l.log_date === todayStr());
+    const card = document.createElement('div');
+    card.className = 'card habit-card';
+    card.innerHTML = `
+      <div class="habit-top">
+        <div class="habit-name">${escapeHtml(habit.title)}</div>
+        <div class="habit-streak">${streak} day streak</div>
+      </div>
+      <div class="gauge">${dates.map(d => {
+        const l = habitLogs.find(x => x.log_date === d);
+        const cls = l ? (l.status === 'missed' ? 'missed' : 'done') : '';
+        return `<div class="gauge-seg ${cls}"></div>`;
+      }).join('')}</div>
+      <div class="habit-actions">
+        <button class="a-done ${todayLog?.status==='done'?'sel-done':''}">Done</button>
+        <button class="a-recovery ${todayLog?.status==='recovery'?'sel-recovery':''}">Recovery</button>
+        <button class="a-missed">Missed</button>
+        <button class="del-btn">×</button>
+      </div>`;
+    async function setStatus(status) {
+      if (todayLog) {
+        await supabase.from('habit_logs').update({ status }).eq('id', todayLog.id);
+      } else {
+        await supabase.from('habit_logs').insert({ user_id: currentUser.id, habit_id: habit.id, log_date: todayStr(), status });
+      }
+      loadHabits();
+    }
+    card.querySelector('.a-done').addEventListener('click', () => setStatus('done'));
+    card.querySelector('.a-recovery').addEventListener('click', () => setStatus('recovery'));
+    card.querySelector('.a-missed').addEventListener('click', () => setStatus('missed'));
+    card.querySelector('.del-btn').addEventListener('click', async () => {
+      await supabase.from('habits').delete().eq('id', habit.id);
+      loadHabits();
+    });
+    list.appendChild(card);
+  });
+  document.getElementById('stat-streaks').textContent = habits.length;
+}
+document.getElementById('habit-add').addEventListener('click', async () => {
+  const title = document.getElementById('habit-title').value.trim();
+  if (!title) return;
+  await supabase.from('habits').insert({ user_id: currentUser.id, title, order_index: Date.now() });
+  document.getElementById('habit-title').value = '';
+  loadHabits();
+});
+
+// ---------------- PENDING / PROGRESS ----------------
+async function loadPending() {
+  const list = document.getElementById('pending-list');
+  list.innerHTML = '<div class="empty-hint">Loading...</div>';
+  const { data } = await supabase.from('pending_items').select('*').eq('status', 'pending').order('created_at', { ascending: false });
+  document.getElementById('stat-pending').textContent = data ? data.length : '0';
+
+  const weekAgo = last7Dates()[0];
+  const { data: doneLogs } = await supabase.from('checklist_logs').select('*').eq('done', true).gte('log_date', weekAgo);
+  document.getElementById('stat-done-week').textContent = doneLogs ? doneLogs.length : '0';
+
+  if (!data || !data.length) { list.innerHTML = '<div class="empty-hint">Nothing pending. Add something below.</div>'; return; }
+  list.innerHTML = '';
+  data.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'pending-row';
+    row.innerHTML = `<div style="flex:1"><div class="pending-title">${escapeHtml(item.title)}</div>${item.note?`<div class="pending-note">${escapeHtml(item.note)}</div>`:''}</div><button class="pending-done-btn">Done</button>`;
+    row.querySelector('.pending-done-btn').addEventListener('click', async () => {
+      await supabase.from('pending_items').update({ status: 'done', completed_at: new Date().toISOString() }).eq('id', item.id);
+      loadPending();
+    });
+    list.appendChild(row);
+  });
+}
+document.getElementById('pending-add').addEventListener('click', async () => {
+  const title = document.getElementById('pending-title').value.trim();
+  if (!title) return;
+  await supabase.from('pending_items').insert({ user_id: currentUser.id, title });
+  document.getElementById('pending-title').value = '';
+  loadPending();
+});
+
+// ---------------- JOURNAL ----------------
+async function loadJournal() {
+  const list = document.getElementById('journal-list');
+  list.innerHTML = '<div class="empty-hint">Loading...</div>';
+  const { data } = await supabase.from('journal_entries').select('*').order('created_at', { ascending: false }).limit(50);
+  if (!data || !data.length) { list.innerHTML = '<div class="empty-hint">No entries yet.</div>'; return; }
+  list.innerHTML = '';
+  data.forEach(entry => {
+    const div = document.createElement('div');
+    div.className = 'journal-entry';
+    const dt = new Date(entry.created_at);
+    div.innerHTML = `<div class="journal-time">${dt.toLocaleDateString('en-GB',{day:'numeric',month:'short'})} · ${dt.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'})}</div><div class="journal-text">${escapeHtml(entry.content)}</div>`;
+    list.appendChild(div);
+  });
+}
+document.getElementById('journal-save').addEventListener('click', async () => {
+  const input = document.getElementById('journal-input');
+  const content = input.value.trim();
+  if (!content) return;
+  await supabase.from('journal_entries').insert({ user_id: currentUser.id, content });
+  input.value = '';
+  loadJournal();
+});
+
+// ---------------- UTIL ----------------
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+// ---------------- SERVICE WORKER ----------------
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
